@@ -1,7 +1,7 @@
 ---
 applications :
-- name: "angular-cloud-deployment"
-  path : "dist/angular-cloud-deployment"
+- name: "travel-risk-meter"
+  path : "dist/travel-risk-meter"
   memory : 256M
   buildpack :
   - "https://github.com/cloudfoundry/staticfile-buildpack.git"
