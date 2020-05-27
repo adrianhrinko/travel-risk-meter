@@ -1,6 +1,7 @@
+---
 applications :
-  name: travel-risk-meter
-  path : dist
-  host: travel-risk-meter
+- name: "travel-risk-meter"
+  path : "dist/travel-risk-meter"
   memory : 256M
-  buildpack : staticfile_buildpack
+  buildpack :
+  - "https://github.com/cloudfoundry/staticfile-buildpack.git"
