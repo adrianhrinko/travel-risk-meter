@@ -6,6 +6,8 @@ import { AppComponent } from './app.component';
 import { MapComponent } from './component/map/map.component';
 import { NavComponent } from './component/nav/nav.component';
 import { CountryComponent } from './component/country/country.component';
+import { CountryService } from './service/Country.service';
+import { HttpClientModule } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -15,10 +17,11 @@ import { CountryComponent } from './component/country/country.component';
     CountryComponent
   ],
   imports: [
+    HttpClientModule,
     BrowserModule,
     AppRoutingModule
   ],
-  providers: [],
+  providers: [CountryService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

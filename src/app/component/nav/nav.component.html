@@ -4,7 +4,8 @@
     <ul class="navbar-nav mr-auto">
     </ul>
     <form class="form-inline mt-2 mt-md-0">
-      <input class="form-control mr-sm-2" type="text" placeholder="Search..." (input)="onSearchChange($event.target.value)">
+      <input *ngIf="!isCountryVisible()" class="form-control mr-sm-2" type="text" placeholder="Search..." (input)="onSearchChange($event.target.value)">
+      <button *ngIf="isCountryVisible()" class="btn btn-warning btn-lg btn-sm ml-2" routerLink="/signup" (click)="cancel()">Back</button>
     </form>
   </div>
 </nav>
