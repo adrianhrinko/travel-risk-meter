@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
+import * as MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 
 @Component({
   selector: 'app-map',
@@ -10,9 +11,6 @@ import { environment } from 'src/environments/environment';
 })
 export class MapComponent implements OnInit {
   map: mapboxgl.Map;
-  style = 'mapbox://styles/mapbox/streets-v11';
-  lat = 37.75;
-  lng = -122.41;
 
   constructor(private router: Router) { 
   }
@@ -23,15 +21,24 @@ export class MapComponent implements OnInit {
 
   ngOnInit() {
   var that = this;
-  var map = new mapboxgl.Map({
+  this.map = new mapboxgl.Map({
     accessToken: environment.mapbox_token,
     container: 'map',
-style: 'mapbox://styles/mapbox/light-v9',
-    center: [-100.04, 38.907],
-    zoom: 3
+    style: 'mapbox://styles/adriqueh/ckarchk0u25u11ins7gefflk0',
+    center: [0, 0],
+    zoom: 1.3
     });
+  var map = this.map;
      
-    map.on('load', function() {
+    this.map.on('load', function() {
+      var layers = map.getStyle().layers;
+      var firstSymbolId;
+      for (var i = 0; i < layers.length; i++) {
+        if (layers[i].type === 'symbol') {
+          firstSymbolId = layers[i].id;
+          break;
+        }
+      }
     // Add a source for the state polygons.
     map.addSource('countries', {
       'type': 'vector',
@@ -45,10 +52,10 @@ style: 'mapbox://styles/mapbox/light-v9',
     'source': 'countries',
     'type': 'fill',
     'paint': {
-      'fill-color': '#52489C', //this is the color you want your tileset to have (I used a nice purple color)
-      'fill-outline-color': '#F2F2F2'
+      'fill-color': '#FFCE00', //this is the color you want your tileset to have (I used a nice purple color)
+      'fill-outline-color': '#343b42'
     }
-    });
+    }, firstSymbolId);
      
     // When a click event occurs on a feature in the states layer, open a popup at the
     // location of the click, with description HTML from its properties.
@@ -58,16 +65,68 @@ style: 'mapbox://styles/mapbox/light-v9',
     });
      
     // Change the cursor to a pointer when the mouse is over the states layer.
-    map.on('mouseenter', 'countries-layer', function() {
+    map.on('mouseenter', 'countries-layer', function(e) {
     map.getCanvas().style.cursor = 'pointer';
     });
      
     // Change it back to a pointer when it leaves.
-    map.on('mouseleave', 'countries-layer', function() {
+    map.on('mouseleave', 'countries-layer', function(e) {
     map.getCanvas().style.cursor = '';
     });
     });
 
+    
+
+  }
+
+
+  onSearchChange(searchValue: string) {
+  if (searchValue.length === 0) {
+    this.flyToDefaultPosition();
+    return;
+  }
+
+   const result = this.map.querySourceFeatures('countries', {sourceLayer: 'ne_10m_admin_0_countries-5csi85', validate: false})
+   ?.filter(x => this.matchesSearchCriteria(x, searchValue));
+
+   if (result.length > 0) {
+     const searchedCountry = result[0];
+     console.log(searchedCountry);
+     var coords = (searchedCountry.geometry as any)?.coordinates[0][0];
+
+     if (coords instanceof Array && typeof coords[0] !== 'number') {
+       coords = coords[0];
+     }
+
+     console.log(coords);
+     this.map.flyTo({
+      center: [
+      coords[0],
+      coords[1]
+      ],
+      zoom: 3,
+      essential: true
+      });
+      return;
+   } 
+   this.flyToDefaultPosition();
+  }
+
+  flyToDefaultPosition() {
+    this.map.flyTo({
+      center: [0, 0],
+      zoom: 1.5,
+      essential: true
+      });
+  }
+
+  matchesSearchCriteria(country: any, searchValue: string): boolean {
+    const searchValueLower = searchValue.toLowerCase();
+    const countryName = country?.properties?.NAME?.toLowerCase();
+    const countryISO = country?.properties?.ADM0_A3_IS?.toLowerCase();
+
+    return countryName?.match('.*' + searchValueLower + '.*')?.length > 0 ||
+    countryISO?.match('^' + searchValueLower + '.*')?.length > 0;
   }
 
 }
