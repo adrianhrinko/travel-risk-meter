@@ -1,8 +1,10 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, ɵConsole } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
 import * as MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
+import { DataService } from 'src/app/service/data.service';
+import {quantile, max, min} from 'simple-statistics'
 
 @Component({
   selector: 'app-map',
@@ -11,12 +13,93 @@ import * as MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 })
 export class MapComponent implements OnInit {
   map: mapboxgl.Map;
+  data: any;
+  data1Q: number;
+  data3Q: number;
+  dataIQR: number;
+  dataMinCut: number;
+  dataMaxCut: number;
+  firstSymbolId: any;
+  countriesLayer: mapboxgl.Layer;
 
-  constructor(private router: Router) { 
+  constructor(private router: Router, private dataService: DataService) { 
   }
 
   onCountryClick(countryCode: string) {
     this.router.navigate(['/country'], {queryParams: {code: countryCode}});
+  }
+
+  setStatistics(data) {
+    const a = data.map(x => x.totalAffected);
+    this.data3Q = quantile(a, 0.75);
+    this.data1Q = quantile(a, 0.25);
+    this.dataIQR = this.data3Q - this.data1Q;
+    this.dataMaxCut = this.data3Q + 1.5 * this.dataIQR;
+    this.dataMinCut = this.data1Q;
+  }
+
+  normalizeValue(x) {
+
+    if (x.totalAffected > this.dataMaxCut) {
+      x.totalAffected = this.dataMaxCut;
+    }
+
+    if (x.totalAffected < this.dataMinCut) {
+      x.totalAffected = this.dataMinCut;
+    }
+
+    var d = this.dataMaxCut - this.dataMinCut;
+
+    if (d === 0) {
+      x.totalAffected = 1;
+      return x;
+    }
+
+    x.totalAffected = (x.totalAffected - this.dataMinCut) / d;
+
+    return x;
+  }
+
+  normalize(data) {
+    this.setStatistics(data);
+    return data.map(x => this.normalizeValue(x));
+  }
+
+  onRiskTypeSelected(riskType: string) {
+    this.loadRiskType(riskType)
+  }
+
+  loadRiskType(riskType: string) {
+    this.dataService.getDisasterGroup(riskType).subscribe(countries => {
+      console.log(countries);
+      this.data = this.normalize(countries);
+      console.log(this.data);
+      console.log(this.data1Q);
+      console.log(this.data3Q);
+      console.log(this.dataMinCut);
+      console.log(this.dataMaxCut);
+
+
+      var expression = ['match', ['get', 'ADM0_A3_IS']];
+
+      this.data.forEach(row => {
+        var val = row['totalAffected']
+
+        var red = val * 255;
+    
+        var green = val * 255;
+        var blue = val * 255;
+        var color = 'rgba(' + red + ', ' + 0 + ', ' + 0 + ', 0.4)';
+        expression.push(row['countryISO'], color);
+      });
+
+      expression.push('rgba(0,0,0,0.5)');
+
+      this.map.setPaintProperty(this.countriesLayer.id, 'fill-color', expression);
+
+    }, err => {
+      console.log(err);
+    });
   }
 
   ngOnInit() {
@@ -32,10 +115,10 @@ export class MapComponent implements OnInit {
      
     this.map.on('load', function() {
       var layers = map.getStyle().layers;
-      var firstSymbolId;
+
       for (var i = 0; i < layers.length; i++) {
         if (layers[i].type === 'symbol') {
-          firstSymbolId = layers[i].id;
+          that.firstSymbolId = layers[i].id;
           break;
         }
       }
@@ -46,16 +129,43 @@ export class MapComponent implements OnInit {
     });
      
     // Add a layer showing the state polygons.
-    map.addLayer({
-    'id': 'countries-layer',
-    'source-layer': 'ne_10m_admin_0_countries-5csi85',
-    'source': 'countries',
-    'type': 'fill',
-    'paint': {
-      'fill-color': '#FFCE00', //this is the color you want your tileset to have (I used a nice purple color)
-      'fill-outline-color': '#343b42'
-    }
-    }, firstSymbolId);
+    that.dataService.getAll('disasters_summary_country').subscribe(countries => {
+      that.data = that.normalize(countries)
+
+      var expression = ['match', ['get', 'ADM0_A3_IS']];
+
+      that.data.forEach(row => {
+        var val = row['totalAffected']
+
+        var red = val * 255;
+    
+        var green = val * 255;
+        var blue = val * 255;
+        var color = 'rgba(' + red + ', ' + 0 + ', ' + 0 + ', 0.4)';
+        expression.push(row['countryISO'], color);
+      });
+
+      expression.push('rgba(0,0,0,0)');
+
+
+      that.countriesLayer = {
+        'id': 'countries-layer',
+        'source-layer': 'ne_10m_admin_0_countries-5csi85',
+        'source': 'countries',
+        'type': 'fill',
+        'paint': {
+          'fill-color': expression as mapboxgl.Expression, //this is the color you want your tileset to have (I used a nice purple color)
+          'fill-outline-color': '#343b42'
+        }
+        };
+
+      map.addLayer(that.countriesLayer, that.firstSymbolId);
+
+    }, err => {
+      console.log(err);
+    });
+
+
      
     // When a click event occurs on a feature in the states layer, open a popup at the
     // location of the click, with description HTML from its properties.
