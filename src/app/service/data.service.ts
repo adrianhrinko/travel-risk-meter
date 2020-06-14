@@ -49,9 +49,43 @@ getDisasterGroup(group: string) {
     },
     "sort": [
        {
-          "totalAffected": "asc"
+          "totalAffected": "desc"
        }
     ]
+ };
+
+  return this.http.post<any>(url, querry, this.httpOptions).pipe(map(x => x.docs));
+}
+
+getTopDisastersForCountry(iso: string) {
+  const url = `${environment.cloudant_url}/disasters_detail/_find`;
+  const querry = {
+    "selector": {
+       "countryISO": iso
+    },
+    "sort": [
+       {
+          "totalAffected": "desc"
+       }
+    ],
+    "limit": 10
+ };
+
+  return this.http.post<any>(url, querry, this.httpOptions).pipe(map(x => x.docs));
+}
+
+getTopAttacksForCountry(iso: string) {
+  const url = `${environment.cloudant_url}/terrorism_detail/_find`;
+  const querry = {
+    "selector": {
+       "countryISO": iso
+    },
+    "sort": [
+       {
+          "totalAffected": "desc"
+       }
+    ],
+    "limit": 10
  };
 
   return this.http.post<any>(url, querry, this.httpOptions).pipe(map(x => x.docs));

@@ -25,6 +25,7 @@ export class NavComponent implements OnInit {
 
     this.dataService.getDisasterTypes().subscribe(result => {
      this.options = result;
+     this.options.push('Terrorism');
     }, err => {
       console.log(err);
     });

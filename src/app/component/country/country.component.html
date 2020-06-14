@@ -19,8 +19,56 @@
   </div>
 </section>
 
-<div class="album py-5">
+<div class="container">
 
+  <h3>Top disaster types:</h3>
+  <table class="table py-5">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Group</th>
+        <th scope="col">Type</th>
+        <th scope="col">Occurence</th>
+        <th scope="col">Deaths</th>
+        <th scope="col">Affected (Injured, ...)</th>
+        <th scope="col">Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let disaster of topDisasters; let i = index">
+        <th scope="row">{{i + 1}}</th>
+        <td>{{disaster.disasterGroup}}</td>
+        <td>{{disaster.disasterType}}</td>
+        <td>{{disaster.occurences}}</td>
+        <td>{{disaster.deaths}}</td>
+        <td>{{disaster.injured}}</td>
+        <td>{{disaster.disasterDetails}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Top terrorized cities:</h3>
+  <table class="table py-5">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">City</th>
+        <th scope="col">Occurence</th>
+        <th scope="col">Deaths</th>
+        <th scope="col">Injured</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let attack of topAttacks; let i = index">
+        <th scope="row">{{i + 1}}</th>
+        <td>{{attack.city}}</td>
+        <td>{{attack.occurences}}</td>
+        <td>{{attack.deaths}}</td>
+        <td>{{attack.injured}}</td>
+      </tr>
+    </tbody>
+  </table>
 
 </div>
+
 </main>

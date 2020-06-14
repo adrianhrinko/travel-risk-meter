@@ -2,9 +2,8 @@ import { Component, OnInit, ViewChild, ɵConsole } from '@angular/core';
 import * as mapboxgl from 'mapbox-gl';
 import { Router } from '@angular/router';
 import { environment } from 'src/environments/environment';
-import * as MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import { DataService } from 'src/app/service/data.service';
-import {quantile, max, min} from 'simple-statistics'
+import {quantile, max, min} from 'simple-statistics';
 
 @Component({
   selector: 'app-map',
@@ -66,44 +65,62 @@ export class MapComponent implements OnInit {
   }
 
   onRiskTypeSelected(riskType: string) {
-    this.loadRiskType(riskType)
+    this.loadRiskType(riskType);
+  }
+
+  colorMap() {
+
+    var expression = ['match', ['get', 'ADM0_A3_IS']];
+
+    this.data.forEach(row => {
+      var val = row['totalAffected']
+
+      var red = val * 255;
+  
+      var green = val * 255;
+      var blue = val * 255;
+      var color = 'rgba(' + red + ', ' + 0 + ', ' + 0 + ', 0.4)';
+      expression.push(row['countryISO'], color);
+    });
+
+    expression.push('rgba(0,0,0,0.5)');
+
+    this.map.setPaintProperty(this.countriesLayer.id, 'fill-color', expression);
+
   }
 
   loadRiskType(riskType: string) {
-    this.dataService.getDisasterGroup(riskType).subscribe(countries => {
-      console.log(countries);
-      this.data = this.normalize(countries);
-      console.log(this.data);
-      console.log(this.data1Q);
-      console.log(this.data3Q);
-      console.log(this.dataMinCut);
-      console.log(this.dataMaxCut);
-
-
-      var expression = ['match', ['get', 'ADM0_A3_IS']];
-
-      this.data.forEach(row => {
-        var val = row['totalAffected']
-
-        var red = val * 255;
-    
-        var green = val * 255;
-        var blue = val * 255;
-        var color = 'rgba(' + red + ', ' + 0 + ', ' + 0 + ', 0.4)';
-        expression.push(row['countryISO'], color);
+    if (riskType === 'Terrorism') {
+      this.dataService.getAll('terrorism_summary').subscribe(countries => {
+        this.data = this.normalize(countries);
+        console.log(this.data);
+        this.colorMap();
+      }, err => {
+        console.log(err);
       });
+    } else {
+      this.dataService.getDisasterGroup(riskType).subscribe(countries => {
+        this.data = this.normalize(countries);
+        console.log(this.data);
+        this.colorMap();
+      }, err => {
+        console.log(err);
+      });
+    }
+  }
 
-      expression.push('rgba(0,0,0,0.5)');
+  determineLayerToDrawOn() {
+    var layers = this.map.getStyle().layers;
 
-      this.map.setPaintProperty(this.countriesLayer.id, 'fill-color', expression);
-
-    }, err => {
-      console.log(err);
-    });
+    for (var i = 0; i < layers.length; i++) {
+      if (layers[i].type === 'symbol') {
+        this.firstSymbolId = layers[i].id;
+        break;
+      }
+    }
   }
 
   ngOnInit() {
-  var that = this;
   this.map = new mapboxgl.Map({
     accessToken: environment.mapbox_token,
     container: 'map',
@@ -111,82 +128,49 @@ export class MapComponent implements OnInit {
     center: [0, 0],
     zoom: 1.3
     });
-  var map = this.map;
-     
-    this.map.on('load', function() {
-      var layers = map.getStyle().layers;
 
-      for (var i = 0; i < layers.length; i++) {
-        if (layers[i].type === 'symbol') {
-          that.firstSymbolId = layers[i].id;
-          break;
-        }
-      }
+  const that = this;
+  const map = this.map;
+
+  this.map.on('load', () => {
+    that.determineLayerToDrawOn();
+
     // Add a source for the state polygons.
     map.addSource('countries', {
       'type': 'vector',
       'url': 'mapbox://adriqueh.6ft2llt7'
     });
-     
-    // Add a layer showing the state polygons.
-    that.dataService.getAll('disasters_summary_country').subscribe(countries => {
-      that.data = that.normalize(countries)
-
-      var expression = ['match', ['get', 'ADM0_A3_IS']];
-
-      that.data.forEach(row => {
-        var val = row['totalAffected']
-
-        var red = val * 255;
     
-        var green = val * 255;
-        var blue = val * 255;
-        var color = 'rgba(' + red + ', ' + 0 + ', ' + 0 + ', 0.4)';
-        expression.push(row['countryISO'], color);
-      });
-
-      expression.push('rgba(0,0,0,0)');
-
-
-      that.countriesLayer = {
+    // Add a layer showing the state polygons.
+    that.countriesLayer = {
         'id': 'countries-layer',
         'source-layer': 'ne_10m_admin_0_countries-5csi85',
         'source': 'countries',
         'type': 'fill',
         'paint': {
-          'fill-color': expression as mapboxgl.Expression, //this is the color you want your tileset to have (I used a nice purple color)
+          'fill-color': 'rgba(0,0,0,0)',
           'fill-outline-color': '#343b42'
-        }
-        };
+        }};
 
-      map.addLayer(that.countriesLayer, that.firstSymbolId);
-
-    }, err => {
-      console.log(err);
-    });
-
-
+    map.addLayer(that.countriesLayer, that.firstSymbolId);
      
     // When a click event occurs on a feature in the states layer, open a popup at the
     // location of the click, with description HTML from its properties.
-    map.on('click', 'countries-layer', function(e) {
+    map.on('click', 'countries-layer', e => {
         const countryCode = e.features[0].properties.ADM0_A3_IS;
         that.onCountryClick(countryCode);
     });
      
     // Change the cursor to a pointer when the mouse is over the states layer.
-    map.on('mouseenter', 'countries-layer', function(e) {
+    map.on('mouseenter', 'countries-layer', e => {
     map.getCanvas().style.cursor = 'pointer';
     });
      
     // Change it back to a pointer when it leaves.
-    map.on('mouseleave', 'countries-layer', function(e) {
+    map.on('mouseleave', 'countries-layer', e => {
     map.getCanvas().style.cursor = '';
     });
     });
-
-    
-
   }
 
 
