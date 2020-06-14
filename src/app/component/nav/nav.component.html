@@ -2,12 +2,14 @@
   <a class="navbar-brand" href="#">Travel risk meter</a>
   <div class="collapse navbar-collapse" id="navbarCollapse">
     <ul class="navbar-nav mr-auto">
-      <select *ngIf="!isCountryVisible()" (change)="onRiskTypeSelected($event)" class="browser-default custom-select mt-2 mt-md-0">
+
+    </ul>
+
+    <form class="form-inline mt-2 mt-md-0">
+      <select *ngIf="!isCountryVisible()" (change)="onRiskTypeSelected($event)" class="browser-default custom-select mr-sm-2">
         <option value="" selected disabled>Select the type of danger</option>
         <option *ngFor="let option of options" [value]="option">{{option}}</option>
       </select>
-    </ul>
-    <form class="form-inline mt-2 mt-md-0">
       <input *ngIf="!isCountryVisible()" class="form-control mr-sm-2" type="text" placeholder="Search..." (input)="onSearchChange($event.target.value)">
       <button *ngIf="isCountryVisible()" class="btn btn-warning btn-lg btn-sm ml-2" routerLink="/signup" (click)="cancel()">Back</button>
     </form>
